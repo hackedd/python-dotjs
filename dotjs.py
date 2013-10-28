@@ -135,7 +135,7 @@ bpmhcfRVwyhqWwYChEQ5Y25Lv0i7Lxpud/UbLE0x/x8=
 """
 
 
-def serve_forever():
+def _main():
     # Create a temporary file to hold the certificate
     fd, certfile = mkstemp(".pem", "dotjs_")
     os.write(fd, cert)
@@ -166,4 +166,4 @@ def serve_forever():
 
 
 if __name__ == "__main__":
-    serve_forever()
+    _main()
