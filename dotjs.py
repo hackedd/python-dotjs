@@ -3,9 +3,13 @@ import os
 import sys
 import ssl
 from tempfile import mkstemp
+from optparse import OptionParser
 
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from SocketServer import ThreadingMixIn, ForkingMixIn
+
+
+__version__ = "1.0"
 
 
 class SecureHTTPServer(HTTPServer):
@@ -135,7 +139,43 @@ bpmhcfRVwyhqWwYChEQ5Y25Lv0i7Lxpud/UbLE0x/x8=
 """
 
 
+def daemonize():
+    if os.fork() != 0:
+        os._exit(0)
+
+    # Make this process a session leader.
+    os.setsid()
+
+    if os.fork() != 0:
+        os._exit(0)
+
+    # Close stdin, stdout and stderr.
+    for fd in 0, 1, 2:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+    # Reopen stdin, stdout and stderr.
+    os.open("/dev/null", os.O_RDWR)
+    os.dup2(0, 1)
+    os.dup2(0, 2)
+
+
 def _main():
+    have_fork = hasattr(os, "fork")
+
+    parser = OptionParser(usage="%prog [options]",
+                          version="%prog " + __version__)
+    if have_fork:
+        parser.add_option("-d", "--daemonize", action="store_true",
+                          help="run in background")
+
+    options, args = parser.parse_args()
+
+    if have_fork and options.daemonize:
+        daemonize()
+
     # Create a temporary file to hold the certificate
     fd, certfile = mkstemp(".pem", "dotjs_")
     os.write(fd, cert)
@@ -148,7 +188,7 @@ def _main():
 
     # Choose an appropiate server class. We prefer forking over threading, but
     # use Threading if fork is not available (as on Windows).
-    if hasattr(os, "fork"):
+    if have_fork:
         Server = ForkingSecureHTTPServer
     else:
         Server = ThreadingSecureHTTPServer
