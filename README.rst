@@ -88,6 +88,16 @@ Windows:
    Certificate store. Make sure to select ``Trusted Root Certification
    Authorities`` as the destination store when asked.
 
+Ubuntu:
+~~~~~~~
+
+-  Use ``certutil`` to import the certificate to your NSS database::
+
+    echo | openssl s_client -connect localhost:3131 2>&1 | \
+        sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/dotjs.crt
+    certutil -d sql:$HOME/.pki/nssdb -A -t "P,," \
+        -n localhost-dotjs -i /tmp/dotjs.crt
+
 Finally install the Google Chrome extension:
 
 http://bit.ly/dotjs
