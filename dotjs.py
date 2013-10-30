@@ -173,9 +173,6 @@ def _main():
 
     options, args = parser.parse_args()
 
-    if have_fork and options.daemonize:
-        daemonize()
-
     # Create a temporary file to hold the certificate
     fd, certfile = mkstemp(".pem", "dotjs_")
     os.write(fd, cert)
@@ -195,6 +192,9 @@ def _main():
 
     # Create a server instance to listen at localhost:3131
     server = Server(("127.0.0.1", 3131), Handler, certfile=certfile)
+
+    if have_fork and options.daemonize:
+        daemonize()
 
     try:
         server.serve_forever()
