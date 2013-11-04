@@ -28,6 +28,9 @@ setup(
         "console_scripts": [
             "dotjs = dotjs:_main",
         ],
+        "gui_scripts": [
+            "dotjsw = dotjs:_win_main",
+        ],
     },
     classifiers=[
         "Development Status :: 4 - Beta",

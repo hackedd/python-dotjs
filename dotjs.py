@@ -174,6 +174,11 @@ def reopen_streams(filename=None):
     sys.stderr = os.fdopen(2, "w", 0)  # unbuffered
 
 
+def _win_main():
+    logfile = os.path.expanduser(os.path.join("~", ".js", "dotjs.log"))
+    _main(logfile)
+
+
 def _main(default_logfile=None):
     have_fork = hasattr(os, "fork")
 
