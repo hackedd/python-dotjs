@@ -9,7 +9,7 @@ from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from SocketServer import ThreadingMixIn, ForkingMixIn
 
 
-__version__ = "1.0"
+__version__ = "1.0.1"
 
 
 class SecureHTTPServer(HTTPServer):
@@ -149,24 +149,39 @@ def daemonize():
     if os.fork() != 0:
         os._exit(0)
 
-    # Close stdin, stdout and stderr.
+
+def reopen_streams(filename=None):
+    # Close stdin, stdout and stderr streams.
+    sys.stdin.close()
+    sys.stdout.close()
+    sys.stderr.close()
+
+    # Close stdin, stdout and stderr descriptors.
     for fd in 0, 1, 2:
         try:
             os.close(fd)
         except OSError:
             pass
 
-    # Reopen stdin, stdout and stderr.
-    os.open("/dev/null", os.O_RDWR)
-    os.dup2(0, 1)
-    os.dup2(0, 2)
+    # Reopen descriptors.
+    os.open(os.devnull, os.O_RDWR)
+    os.open(filename or os.devnull, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+    os.dup2(1, 2)
+
+    # Reopen streams.
+    sys.stdin = os.fdopen(0, "r")
+    sys.stdout = os.fdopen(1, "w", 1)  # line buffer
+    sys.stderr = os.fdopen(2, "w", 0)  # unbuffered
 
 
-def _main():
+def _main(default_logfile=None):
     have_fork = hasattr(os, "fork")
 
     parser = OptionParser(usage="%prog [options]",
                           version="%prog " + __version__)
+    parser.add_option("--log", metavar="FILE", default=default_logfile,
+                      help="write output to FILE instead of terminal")
+
     if have_fork:
         parser.add_option("-d", "--daemonize", action="store_true",
                           help="run in background")
@@ -195,6 +210,9 @@ def _main():
 
     if have_fork and options.daemonize:
         daemonize()
+        reopen_streams(options.log)
+    elif options.log:
+        reopen_streams(options.log)
 
     try:
         server.serve_forever()
