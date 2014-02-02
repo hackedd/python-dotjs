@@ -9,7 +9,7 @@ from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from SocketServer import ThreadingMixIn, ForkingMixIn
 
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 
 class SecureHTTPServer(HTTPServer):
