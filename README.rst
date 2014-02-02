@@ -65,11 +65,10 @@ Install it
     cd python-dotjs
     python setup.py install
 
-Now open https://localhost:3131 in Chrome and follow these steps:
-
 OS X:
 ~~~~~
 
+-  Open https://localhost:3131 in Google Chrome
 -  Click the "X" Padlock icon in the address bar
 -  Click "Certificate Information"
 -  Drag the large cert icon to your desktop
@@ -79,10 +78,10 @@ OS X:
 Windows:
 ~~~~~~~~
 
--  Click the "X" Padlock icon in the address bar
--  Click "Certificate Information"
--  On the "Details" tab, click "Copy to File..."
--  Export the certificate as a ".cer" file
+-  Export the certificate as a ".cer" file::
+
+    dotjs --print-cert > %TEMP%\dotjs.cer
+
 -  Right-click the exported ".cer" file, click "Install Certificate"
 -  Complete the Wizard to import the certificate to the Windows
    Certificate store. Make sure to select ``Trusted Root Certification
@@ -93,14 +92,14 @@ Ubuntu:
 
 -  Use ``certutil`` to import the certificate to your NSS database::
 
-    echo | openssl s_client -connect localhost:3131 2>&1 | \
-        sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/dotjs.crt
-    certutil -d sql:$HOME/.pki/nssdb -A -t "P,," \
-        -n localhost-dotjs -i /tmp/dotjs.crt
+    dotjs --print-cert | certutil -d sql:$HOME/.pki/nssdb -A \
+        -t "P,," -n localhost-dotjs
 
-Finally install the Google Chrome extension:
+You might need to restart Chrome before it sees the certificate as trusted.
+You can verify if the certificate is correctly installed by opening
+https://localhost:3131 in Chrome.
 
-http://bit.ly/dotjs
+Finally install the Google Chrome extension: http://bit.ly/dotjs
 
 Credits
 -------
