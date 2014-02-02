@@ -121,7 +121,8 @@ u7KDe8+t8qnEFvrwCEpLUzvedSZxkaKzHrrCnIYlDnXRZBveKngWoejGzqtyIXup
 YKzBZaZWH8cV72RdDwgM1owWi3KZBKpxfphYkWSRRx59djHZY/Yjudnb3oT/3c8/
 NHsFbLbrZaGriLshIwrjEGs=
 -----END CERTIFICATE-----
------BEGIN RSA PRIVATE KEY-----
+"""
+key = """-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQDDYDYo6BZg+U1+zTHdqRhHhJsEYn1kXOOY1UtWuZFJ3H0X4K+H
 ocoD0A0tl61JHfjmJ3hSFznADVvVgFgJX3i7PA4koLPvZrblY2efEQLEV5Fux976
 kL+bAMZpsMFRjfVnylviCP8S4aTLVRkB/jDrnBm7LDg85NL8FxBknhKmHQIDAQAB
@@ -186,6 +187,8 @@ def _main(default_logfile=None):
                           version="%prog " + __version__)
     parser.add_option("--log", metavar="FILE", default=default_logfile,
                       help="write output to FILE instead of terminal")
+    parser.add_option("--print-cert", action="store_true",
+                      help="print certificate to terminal, then exit")
 
     if have_fork:
         parser.add_option("-d", "--daemonize", action="store_true",
@@ -193,9 +196,13 @@ def _main(default_logfile=None):
 
     options, args = parser.parse_args()
 
+    if options.print_cert:
+        sys.stdout.write(cert)
+        sys.exit(0)
+
     # Create a temporary file to hold the certificate
     fd, certfile = mkstemp(".pem", "dotjs_")
-    os.write(fd, cert)
+    os.write(fd, cert + key)
     os.close(fd)
 
     # Set the ~/.js directory in the handler class
