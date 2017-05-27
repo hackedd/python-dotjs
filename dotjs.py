@@ -176,16 +176,15 @@ def reopen_streams(filename=None):
 
 
 def _win_main():
-    logfile = os.path.expanduser(os.path.join("~", ".js", "dotjs.log"))
-    _main(logfile)
+    _main(log_to_file=True)
 
 
-def _main(default_logfile=None):
+def _main(log_to_file=False):
     have_fork = hasattr(os, "fork")
 
     parser = OptionParser(usage="%prog [options]",
                           version="%prog " + __version__)
-    parser.add_option("--log", metavar="FILE", default=default_logfile,
+    parser.add_option("--log", metavar="FILE",
                       help="write output to FILE instead of terminal")
     parser.add_option("--print-cert", action="store_true",
                       help="print certificate to terminal, then exit")
@@ -209,6 +208,9 @@ def _main(default_logfile=None):
     Handler.directory = os.path.expanduser(os.path.join("~", ".js"))
     if not os.path.exists(Handler.directory):
         os.makedirs(Handler.directory)
+
+    if log_to_file and not options.log:
+        options.log = os.path.join(Handler.directory, "dotjs.log")
 
     # Choose an appropiate server class. We prefer forking over threading, but
     # use Threading if fork is not available (as on Windows).
