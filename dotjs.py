@@ -188,6 +188,8 @@ def _main(log_to_file=False):
                       help="write output to FILE instead of terminal")
     parser.add_option("--print-cert", action="store_true",
                       help="print certificate to terminal, then exit")
+    parser.add_option("--directory", metavar="DIR",
+                      help="serve scripts from DIR (default: ~/.js)")
 
     if have_fork:
         parser.add_option("-d", "--daemonize", action="store_true",
@@ -205,12 +207,18 @@ def _main(log_to_file=False):
     os.close(fd)
 
     # Set the ~/.js directory in the handler class
-    Handler.directory = os.path.expanduser(os.path.join("~", ".js"))
-    if not os.path.exists(Handler.directory):
-        os.makedirs(Handler.directory)
+    if options.directory:
+        directory = options.directory
+    else:
+        directory = os.path.expanduser(os.path.join("~", ".js"))
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    Handler.directory = directory
 
     if log_to_file and not options.log:
-        options.log = os.path.join(Handler.directory, "dotjs.log")
+        options.log = os.path.join(directory, "dotjs.log")
 
     # Choose an appropiate server class. We prefer forking over threading, but
     # use Threading if fork is not available (as on Windows).
