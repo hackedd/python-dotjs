@@ -5,8 +5,12 @@ import ssl
 from tempfile import mkstemp
 from optparse import OptionParser
 
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from SocketServer import ThreadingMixIn, ForkingMixIn
+try:
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    from socketserver import ThreadingMixIn, ForkingMixIn
+except ImportError:
+    from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+    from SocketServer import ThreadingMixIn, ForkingMixIn
 
 
 __version__ = "1.0.2"
@@ -51,10 +55,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/":
             # Serve a special index page if no domain is given.
             body = "<h1>dotjs</h1>\n<p>dotjs is working!</p>\n"
-            content_type = "text/html"
+            content_type = "text/html; encoding=utf-8"
         else:
             body = self.build_body()
-            content_type = "text/javascript"
+            content_type = "application/javascript; encoding=utf-8"
 
         self.send_response(200, "OK")
 
@@ -64,10 +68,11 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", origin)
 
         # Send the response body.
+        body_bytes = body.encode("utf-8")
         self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", len(body))
+        self.send_header("Content-Length", len(body_bytes))
         self.end_headers()
-        self.wfile.write(body)
+        self.wfile.write(body_bytes)
 
     def build_body(self):
         """Combine script files basted on the path of the request. For a
@@ -107,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
             return origin
 
 
-cert = """-----BEGIN CERTIFICATE-----
+cert = b"""-----BEGIN CERTIFICATE-----
 MIICPDCCAaWgAwIBAgIJANDCAlWV4APcMA0GCSqGSIb3DQEBBQUAMFMxCzAJBgNV
 BAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMQswCQYDVQQHDAJMQTEOMAwGA1UE
 CgwFZG90anMxEjAQBgNVBAMMCWxvY2FsaG9zdDAeFw0xNzA1MjMxNTMxMTlaFw0y
@@ -122,7 +127,7 @@ CSqGSIb3DQEBBQUAA4GBACLv5faT+VIio4xkz9dzzB93OzHdAnmK+S0yOw91azlU
 ZEKXxi1onHPkbfL58U7/yOoja9AMzOjuBVm1k3XjQKHQe3DB7n73aiTDqet6+M3C
 -----END CERTIFICATE-----
 """
-key = """-----BEGIN RSA PRIVATE KEY-----
+key = b"""-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQDDYDYo6BZg+U1+zTHdqRhHhJsEYn1kXOOY1UtWuZFJ3H0X4K+H
 ocoD0A0tl61JHfjmJ3hSFznADVvVgFgJX3i7PA4koLPvZrblY2efEQLEV5Fux976
 kL+bAMZpsMFRjfVnylviCP8S4aTLVRkB/jDrnBm7LDg85NL8FxBknhKmHQIDAQAB
