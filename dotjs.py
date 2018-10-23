@@ -13,7 +13,7 @@ except ImportError:
     from SocketServer import ThreadingMixIn, ForkingMixIn
 
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 
 class SecureHTTPServer(HTTPServer):
