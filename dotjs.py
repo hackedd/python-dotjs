@@ -177,7 +177,7 @@ def reopen_streams(filename=None):
     # Reopen streams.
     sys.stdin = os.fdopen(0, "r")
     sys.stdout = os.fdopen(1, "w", 1)  # line buffer
-    sys.stderr = os.fdopen(2, "w", 0)  # unbuffered
+    sys.stderr = os.fdopen(2, "w", 1)
 
 
 def _win_main():
@@ -234,6 +234,11 @@ def _main(log_to_file=False):
 
     # Create a server instance to listen at localhost:3131
     server = Server(("127.0.0.1", 3131), Handler, certfile=certfile)
+
+    # Since Python 3.4, file descriptors created by Python are
+    # non-inheritable by default
+    if hasattr(os, "set_inheritable"):
+        os.set_inheritable(server.socket.fileno(), True)
 
     if have_fork and options.daemonize:
         daemonize()
