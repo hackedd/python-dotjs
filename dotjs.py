@@ -13,7 +13,7 @@ except ImportError:
     from SocketServer import ThreadingMixIn, ForkingMixIn
 
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 
 class SecureHTTPServer(HTTPServer):
@@ -62,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
 
         self.send_response(200, "OK")
 
-        # Send appropiate CORS header if Origin was specified
+        # Send appropriate CORS header if Origin was specified
         origin = self.detect_origin()
         if origin:
             self.send_header("Access-Control-Allow-Origin", origin)
@@ -104,11 +104,18 @@ class Handler(BaseHTTPRequestHandler):
         """Inspect the Origin header to see if it matches the path.
         """
         origin = self.headers.get("Origin")
+        if not origin or "://" not in origin:
+            return None
+
+        _, origin_host = origin.split("://", 1)
+        if ":" in origin_host:
+            origin_host, _ = origin_host.split(":")
+
         search = self.path.replace("/", "")
         if search.endswith(".js"):
             search = search[:-3]
 
-        if origin and self.path and origin.endswith(search):
+        if origin and self.path and origin_host == search:
             return origin
 
 
@@ -282,12 +289,12 @@ def _main(log_to_file=False):
     # Choose an appropiate server class. We prefer forking over threading, but
     # use Threading if fork is not available (as on Windows).
     if have_fork:
-        Server = ForkingSecureHTTPServer
+        server_class = ForkingSecureHTTPServer
     else:
-        Server = ThreadingSecureHTTPServer
+        server_class = ThreadingSecureHTTPServer
 
     # Create a server instance to listen at localhost:3131
-    server = Server(("127.0.0.1", 3131), Handler, certfile=certfile)
+    server = server_class(("127.0.0.1", 3131), Handler, certfile=certfile)
 
     # Since Python 3.4, file descriptors created by Python are
     # non-inheritable by default
