@@ -1,4 +1,8 @@
 build/
 dist/
 dotjs.egg-info/
+.idea/
+htmlcov/
+
 *.py[cob]
+.coverage
