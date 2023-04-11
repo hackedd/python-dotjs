@@ -6,11 +6,14 @@ verify_ssl = true
 [scripts]
 test = "pytest"
 coverage = "pytest --cov . --cov-report html"
+type-checks = "mypy dotjs.py tests"
 
 [dev-packages]
 pytest = "*"
 pytest-cov = "*"
 requests = "*"
+mypy = "*"
+types-requests = "*"
 
 [packages]
 dotjs = {path = ".", editable = true}

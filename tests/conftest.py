@@ -1,16 +1,33 @@
+import pathlib
 import threading
-from http.server import ThreadingHTTPServer
+import typing
+from http.server import HTTPServer, ThreadingHTTPServer
 
 import pytest
 
 import dotjs
 
 
-def make_handler(directory):
-    return type("TestHandler", (dotjs.Handler, ), {"directory": directory})
+class TestServer(ThreadingHTTPServer):
+    @property
+    def url(self) -> str:
+        return f"http://localhost:{self.server_address[-1]}/"
 
 
-def run_server(server):
+class SecureTestServer(dotjs.ThreadingSecureHTTPServer):
+    @property
+    def url(self) -> str:
+        return f"https://localhost:{self.server_address[-1]}/"
+
+
+def make_handler(directory: str) -> typing.Type[dotjs.Handler]:
+    return type("TestHandler", (dotjs.Handler,), {"directory": directory})
+
+
+Server = typing.TypeVar("Server", bound=HTTPServer)
+
+
+def run_server(server: Server) -> typing.Iterable[Server]:
     thread = threading.Thread(target=server.serve_forever)
     thread.start()
 
@@ -21,31 +38,22 @@ def run_server(server):
 
 
 @pytest.fixture(name="server")
-def server_fixture(tmpdir):
-    server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(tmpdir))
-
-    server.url = f"http://localhost:{server.server_address[-1]}/"
-
-    thread = threading.Thread(target=server.serve_forever)
-    thread.start()
-
-    yield server
-
-    server.shutdown()
-    thread.join()
+def server_fixture(tmp_path: pathlib.Path) -> typing.Iterable[TestServer]:
+    server = TestServer(("127.0.0.1", 0), make_handler(str(tmp_path)))
+    yield from run_server(server)
 
 
 @pytest.fixture(name="secure_server")
-def secure_server_fixture(tmpdir):
-    certificate = tmpdir.join("dotjs.pem")
-    certificate.write(dotjs.cert + dotjs.key)
+def secure_server_fixture(
+    tmp_path: pathlib.Path,
+) -> typing.Iterable[SecureTestServer]:
+    certificate = tmp_path / "dotjs.pem"
+    certificate.write_bytes(dotjs.cert + dotjs.key)
 
-    server = dotjs.ThreadingSecureHTTPServer(
+    server = SecureTestServer(
         ("127.0.0.1", 0),
-        make_handler(tmpdir),
+        make_handler(str(tmp_path)),
         certfile=str(certificate),
     )
-
-    server.url = f"https://localhost:{server.server_address[-1]}/"
 
     yield from run_server(server)

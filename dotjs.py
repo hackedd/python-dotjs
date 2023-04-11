@@ -1,42 +1,53 @@
 #!/usr/bin/env python
 import os
-import sys
 import ssl
-from tempfile import mkstemp
+import sys
+import typing
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from optparse import OptionParser
-
-try:
-    from http.server import HTTPServer, BaseHTTPRequestHandler
-    from socketserver import ThreadingMixIn, ForkingMixIn
-except ImportError:
-    from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-    from SocketServer import ThreadingMixIn, ForkingMixIn
-
+from socketserver import ForkingMixIn, ThreadingMixIn
+from tempfile import mkstemp
 
 __version__ = "1.0.6"
 
+if typing.TYPE_CHECKING:
+    OptionalStrOrBytesPath = typing.Union[
+        str, bytes, os.PathLike[str], os.PathLike[bytes], None
+    ]
+
 
 class SecureHTTPServer(HTTPServer):
-    def __init__(self, server_address, RequestHandlerClass,
-                 bind_and_activate=True, keyfile=None, certfile=None,
-                 ssl_version=ssl.PROTOCOL_SSLv23):
-
-        HTTPServer.__init__(self, server_address, RequestHandlerClass,
-                            bind_and_activate)
+    def __init__(
+        self,
+        server_address: typing.Tuple[str, int],
+        RequestHandlerClass: typing.Type[BaseHTTPRequestHandler],
+        bind_and_activate: bool = True,
+        keyfile: "OptionalStrOrBytesPath" = None,
+        certfile: "OptionalStrOrBytesPath" = None,
+        ssl_version: int = ssl.PROTOCOL_SSLv23,
+    ):
+        HTTPServer.__init__(
+            self, server_address, RequestHandlerClass, bind_and_activate
+        )
         self.keyfile = keyfile
         self.certfile = certfile
         self.ssl_version = ssl_version
 
-    def get_request(self):
+    def get_request(
+        self,
+    ) -> typing.Tuple[ssl.SSLSocket, typing.Tuple[str, int]]:
         """Get the request and client address from the socket, and wraps the
-        connection in a SSL stream.
+        connection in an SSL stream.
 
         """
-
         socket, addr = self.socket.accept()
-        stream = ssl.wrap_socket(socket, server_side=True,
-                                 keyfile=self.keyfile, certfile=self.certfile,
-                                 ssl_version=self.ssl_version)
+        stream = ssl.wrap_socket(
+            socket,
+            server_side=True,
+            keyfile=self.keyfile,
+            certfile=self.certfile,
+            ssl_version=self.ssl_version,
+        )
         return stream, addr
 
 
@@ -49,9 +60,9 @@ class ForkingSecureHTTPServer(ForkingMixIn, SecureHTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
-    directory = None
+    directory: str = ".js"
 
-    def do_GET(self):
+    def do_GET(self) -> None:
         if self.path == "/":
             # Serve a special index page if no domain is given.
             body = "<h1>dotjs</h1>\n<p>dotjs is working!</p>\n"
@@ -70,11 +81,11 @@ class Handler(BaseHTTPRequestHandler):
         # Send the response body.
         body_bytes = body.encode("utf-8")
         self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", len(body_bytes))
+        self.send_header("Content-Length", str(len(body_bytes)))
         self.end_headers()
         self.wfile.write(body_bytes)
 
-    def build_body(self):
+    def build_body(self) -> str:
         """Combine script files basted on the path of the request. For a
         request for ``/gist.github.com.js``, tries to load
         ``gist.github.com.js`` as well as ``github.com.js`` and ``com.js``, in
@@ -95,15 +106,14 @@ class Handler(BaseHTTPRequestHandler):
         body = "// dotjs is working! //\n"
         for filename in files:
             if os.path.exists(filename):
-                with open(filename, "r") as fp:
+                with open(filename) as fp:
                     body += fp.read() + "\n"
 
         return body
 
-    def detect_origin(self):
-        """Inspect the Origin header to see if it matches the path.
-        """
-        origin = self.headers.get("Origin")
+    def detect_origin(self) -> typing.Optional[str]:
+        """Inspect the Origin header to see if it matches the path."""
+        origin: typing.Optional[str] = self.headers.get("Origin")
         if not origin or "://" not in origin:
             return None
 
@@ -117,6 +127,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if origin and self.path and origin_host == search:
             return origin
+        else:
+            return None
 
 
 cert = b"""-----BEGIN CERTIFICATE-----
@@ -206,7 +218,7 @@ s2Qs/rj6a/HlNGAjQSjjTn9Brwi6gA==
 """
 
 
-def daemonize():
+def daemonize() -> None:
     if os.fork() != 0:
         os._exit(0)
 
@@ -217,7 +229,7 @@ def daemonize():
         os._exit(0)
 
 
-def reopen_streams(filename=None):
+def reopen_streams(filename: typing.Optional[str] = None) -> None:
     # Close stdin, stdout and stderr streams.
     sys.stdin.close()
     sys.stdout.close()
@@ -241,30 +253,41 @@ def reopen_streams(filename=None):
     sys.stderr = os.fdopen(2, "w", 1)
 
 
-def _win_main():
-    _main(log_to_file=True)
+def logging_main() -> None:
+    main(log_to_file=True)
 
 
-def _main(log_to_file=False):
+def main(log_to_file: bool = False) -> None:
+    parser = OptionParser(
+        usage="%prog [options]",
+        version="%prog " + __version__,
+    )
+    parser.add_option(
+        "--log",
+        metavar="FILE",
+        help="write output to FILE instead of terminal",
+    )
+    parser.add_option(
+        "--print-cert",
+        action="store_true",
+        help="print certificate to terminal, then exit",
+    )
+    parser.add_option(
+        "--directory",
+        metavar="DIR",
+        help="serve scripts from DIR (default: ~/.js)",
+    )
+
     have_fork = hasattr(os, "fork")
-
-    parser = OptionParser(usage="%prog [options]",
-                          version="%prog " + __version__)
-    parser.add_option("--log", metavar="FILE",
-                      help="write output to FILE instead of terminal")
-    parser.add_option("--print-cert", action="store_true",
-                      help="print certificate to terminal, then exit")
-    parser.add_option("--directory", metavar="DIR",
-                      help="serve scripts from DIR (default: ~/.js)")
-
     if have_fork:
-        parser.add_option("-d", "--daemonize", action="store_true",
-                          help="run in background")
+        parser.add_option(
+            "-d", "--daemonize", action="store_true", help="run in background"
+        )
 
     options, args = parser.parse_args()
 
     if options.print_cert:
-        sys.stdout.write(cert)
+        sys.stdout.write(cert.decode())
         sys.exit(0)
 
     # Create a temporary file to hold the certificate
@@ -286,10 +309,10 @@ def _main(log_to_file=False):
     if log_to_file and not options.log:
         options.log = os.path.join(directory, "dotjs.log")
 
-    # Choose an appropiate server class. We prefer forking over threading, but
-    # use Threading if fork is not available (as on Windows).
+    # Choose an appropriate server class. We prefer forking to threading, but
+    # use threading if fork is not available (as on Windows).
     if have_fork:
-        server_class = ForkingSecureHTTPServer
+        server_class: typing.Type[SecureHTTPServer] = ForkingSecureHTTPServer
     else:
         server_class = ThreadingSecureHTTPServer
 
@@ -317,4 +340,4 @@ def _main(log_to_file=False):
 
 
 if __name__ == "__main__":
-    _main()
+    main()

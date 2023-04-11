@@ -3,14 +3,14 @@ from setuptools import setup
 
 
 def get_version():
-    with open("dotjs.py", "r") as fp:
+    with open("dotjs.py") as fp:
         for line in fp:
             if line.startswith("__version__"):
                 return eval(line.split("=")[-1])
 
 
 def read(filename):
-    with open(filename, "r") as fp:
+    with open(filename) as fp:
         return fp.read()
 
 
@@ -26,10 +26,10 @@ setup(
     py_modules=["dotjs"],
     entry_points={
         "console_scripts": [
-            "dotjs = dotjs:_main",
+            "dotjs = dotjs:main",
         ],
         "gui_scripts": [
-            "dotjsw = dotjs:_win_main",
+            "dotjsw = dotjs:logging_main",
         ],
     },
     classifiers=[

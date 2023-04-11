@@ -1,16 +1,22 @@
+import pathlib
+import typing
+
 import requests
 
+if typing.TYPE_CHECKING:
+    from conftest import TestServer
 
-def test_index(server):
+
+def test_index(server: "TestServer") -> None:
     r = requests.get(server.url)
     assert r.ok
     assert "dotjs is working!" in r.text
 
 
-def test_default_js(tmpdir, server):
-    tmpdir.join("default.js").write("// This is default.js\n")
-    tmpdir.join("example.com.js").write("// This is example.com.js\n")
-    tmpdir.join("example.org.js").write("// This is example.org.js\n")
+def test_default_js(tmp_path: pathlib.Path, server: "TestServer") -> None:
+    (tmp_path / "default.js").write_text("// This is default.js\n")
+    (tmp_path / "example.com.js").write_text("// This is example.com.js\n")
+    (tmp_path / "example.org.js").write_text("// This is example.org.js\n")
 
     r = requests.get(f"{server.url}example.com.js")
     assert r.ok
@@ -19,11 +25,15 @@ def test_default_js(tmpdir, server):
     assert "// This is example.org.js\n" not in r.text
 
 
-def test_multiple_subdomains(tmpdir, server):
-    tmpdir.join("www.example.com.js").write("// This is www.example.com\n")
-    tmpdir.join("example.com.js").write("// This is example.com\n")
-    tmpdir.join("com.js").write("// This is com\n")
-    tmpdir.join("example.org.js").write("// This is example.org.js\n")
+def test_multiple_subdomains(
+    tmp_path: pathlib.Path, server: "TestServer"
+) -> None:
+    (tmp_path / "www.example.com.js").write_text(
+        "// This is www.example.com\n"
+    )
+    (tmp_path / "example.com.js").write_text("// This is example.com\n")
+    (tmp_path / "com.js").write_text("// This is com\n")
+    (tmp_path / "example.org.js").write_text("// This is example.org.js\n")
 
     r = requests.get(f"{server.url}www.example.com.js")
     assert r.ok
